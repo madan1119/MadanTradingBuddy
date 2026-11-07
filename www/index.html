@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Madan's Trading Buddy</title>
+    <style>
+        :root { --bg: #121212; --card: #1e1e1e; --text: #ffffff; --primary: #ff4a4a; --success: #00c853; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        h2, h3 { margin-bottom: 5px; }
+        .card { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        label { display: block; margin: 10px 0 5px; font-size: 14px; color: #bbb; }
+        select, input, textarea { width: 100%; padding: 12px; background: #2a2a2a; border: 1px solid #444; border-radius: 8px; color: #fff; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 14px; background: var(--primary); border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 16px; margin-top: 15px; cursor: pointer; }
+        .metric { font-size: 24px; font-weight: bold; color: var(--success); margin: 10px 0; }
+        .error-box { background: rgba(255, 74, 74, 0.2); border-left: 4px solid var(--primary); padding: 10px; margin-top: 10px; border-radius: 4px; }
+        .success-box { background: rgba(0, 200, 83, 0.2); border-left: 4px solid var(--success); padding: 10px; margin-top: 10px; border-radius: 4px; }
+        .log-item { background: #252525; padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <h2>🤝 Madan's Trading Buddy</h2>
+    <p style="color: #888; font-size: 14px; margin-top:0;">Your private offline trading app.</p>
+    <div class="card">
+        <h3>📝 Log Your Trade</h3>
+        <label>Select Asset / Index</label>
+        <select id="asset">
+            <option>Nifty 50</option>
+            <option>BankNifty</option>
+            <option>FinNifty</option>
+            <option>Equity Stocks</option>
+        </select>
+        <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+                <label>Outcome</label>
+                <select id="outcome">
+                    <option value="Profit">Profit 🟢</option>
+                    <option value="Loss">Loss 🔴</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>Points Gained/Lost</label>
+                <input type="number" id="points" value="0">
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+                <label>Chart Pattern</label>
+                <select id="pattern">
+                    <option>W Pattern</option>
+                    <option>M Pattern</option>
+                    <option>Breakout Line</option>
+                    <option>Support/Resistance Bounce</option>
+                    <option>Random Entry</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>Candle Size</label>
+                <select id="candle">
+                    <option>Normal Candle</option>
+                    <option>Huge Momentum</option>
+                    <option>Pinbar Rejection</option>
+                </select>
+            </div>
+        </div>
+        <label>Tell your buddy what happened:</label>
+        <textarea id="story" rows="3" placeholder="Bro, I saw an M pattern but entered early due to FOMO..."></textarea>
+        <button onclick="evaluateTrade()">🔥 EVALUATE MY TRADE</button>
+        <div id="verdictBox"></div>
+    </div>
+    <div class="card">
+        <h3>📊 Net Performance Tally</h3>
+        <div class="metric" id="netPoints">0.0 Points</div>
+    </div>
+    <div class="card">
+        <h3>📜 Past Trade Logbook</h3>
+        <div id="logHistory"></div>
+    </div>
+    <script>
+        let history = JSON.parse(localStorage.getItem('trading_history') || '[]');
+        function updateUI() {
+            let total = history.reduce((sum, item) => sum + parseFloat(item.points || 0), 0);
+            document.getElementById('netPoints').innerText = (total >= 0 ? '+' : '') + total.toFixed(1) + ' Points';
+            document.getElementById('netPoints').style.color = total >= 0 ? '#00c853' : '#ff4a4a';
+            let logHtml = '';
+            history.slice().reverse().forEach(item => {
+                let badge = item.outcome === 'Profit' ? '🟢' : '🔴';
+                logHtml += `<div class="log-item">
+                    <b>${badge} ${item.date} | ${item.asset}</b><br>
+                    Setup: ${item.pattern} (${item.points >= 0 ? '+' : ''}${item.points} Pts)<br>
+                    <i>Verdict: ${item.verdict}</i><br>
+                    <span style="color:#aaa;">Notes: ${item.notes}</span>
+                </div>`;
+            });
+            document.getElementById('logHistory').innerHTML = logHtml || '<p style="color:#666;">No trades logged yet.</p>';
+        }
+        function evaluateTrade() {
+            let story = document.getElementById('story').value;
+            if (!story) { alert('Please tell your buddy what happened first!'); return; }
+            let lowerStory = story.toLowerCase();
+            let verdict = "Right Execution";
+            let explanation = "You stayed disciplined and followed your structure.";
+            if (lowerStory.includes('fomo') || lowerStory.includes('impatient') || lowerStory.includes('early')) {
+                verdict = "Wrong Entry (FOMO)";
+                explanation = "You entered too early because you panicked about missing the move.";
+            } else if (lowerStory.includes('revenge') || lowerStory.includes('recover') || lowerStory.includes('angry')) {
+                verdict = "Wrong Mindset (Revenge Trading)";
+                explanation = "You took this trade emotionally to wipe out a prior loss.";
+            }
+            let pastCount = history.filter(item => item.verdict === verdict).length;
+            let verdictBox = document.getElementById('verdictBox');
+            if (verdict.includes('Wrong')) {
+                verdictBox.innerHTML = `<div class="error-box"><b>🚨 Madan, you are WRONG here!</b><br>${explanation}<br><span style="color:#ffb7b7;">⚠️ Historical Blunder Count: ${pastCount} times before!</span></div>`;
+            } else {
+                verdictBox.innerHTML = `<div class="success-box"><b>🔥 Madan, you are RIGHT! Clean Execution!</b><br>${explanation}</div>`;
+            }
+            let newEntry = {
+                date: new Date().toLocaleDateString(),
+                asset: document.getElementById('asset').value,
+                outcome: document.getElementById('outcome').value,
+                points: parseFloat(document.getElementById('points').value || 0),
+                pattern: document.getElementById('pattern').value,
+                verdict: verdict,
+                notes: story
+            };
+            history.push(newEntry);
+            localStorage.setItem('trading_history', JSON.stringify(history));
+            updateUI();
+            document.getElementById('story').value = '';
+        }
+        updateUI();
+    </script>
+</body>
+</html>
+
+X
+
+npm install @capacitor/android && npx cap add android
+
